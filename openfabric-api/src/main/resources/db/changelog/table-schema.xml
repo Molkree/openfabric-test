@@ -43,6 +43,19 @@
             <column name="deleted_at" type="DATETIME"/>
         </createTable>
     </changeSet>
+    <changeSet id="WO_02" author="dmitry" >
+        <addColumn tableName="worker">
+            <column name="port" type="varchar(5)"/>
+            <column name="protocol" type="varchar(255)"/>
+            <column name="address" type="varchar(45)"/>
+            <column name="domain" type="varchar(255)"/>
+            <column name="specifications" type="varchar(255)"/>
+            <column name="cpu" type="varchar(255)"/>
+            <column name="gpu" type="varchar(255)"/>
+            <column name="memory" type="varchar(255)"/>
+            <column name="recommended" type="boolean"/>
+        </addColumn>
+    </changeSet>
 
 
 </databaseChangeLog>

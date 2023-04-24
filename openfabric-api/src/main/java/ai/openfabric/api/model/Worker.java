@@ -21,7 +21,43 @@ public class Worker extends Datable implements Serializable {
     @Setter
     public String id;
 
+    @Getter
+    @Setter
     public String name;
 
+    @Getter
+    @Setter
+    public String port;
 
+    @Getter
+    @Setter
+    public String protocol;
+
+    @Getter
+    @Setter
+    public String address;
+
+    @Getter
+    @Setter
+    public String domain;
+
+    @Getter
+    @Setter
+    public String specifications;
+
+    @Getter
+    @Setter
+    public String cpu;
+
+    @Getter
+    @Setter
+    public String gpu;
+
+    @Getter
+    @Setter
+    public String memory;
+
+    @Getter
+    @Setter
+    public Boolean recommended;
 }

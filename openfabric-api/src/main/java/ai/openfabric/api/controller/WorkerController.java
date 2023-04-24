@@ -35,7 +35,6 @@ public class WorkerController {
         if (optionalWorker.isPresent()) {
             Worker worker = optionalWorker.get();
             worker.deletedAt = new Date();
-            worker.updatedAt = worker.deletedAt;
             workerRepository.save(worker);
         }
         else {

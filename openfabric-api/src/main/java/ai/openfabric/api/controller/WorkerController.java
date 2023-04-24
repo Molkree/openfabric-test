@@ -42,4 +42,15 @@ public class WorkerController {
         }
         return String.format("Stopped worker %s", id);
     }
+
+    @GetMapping("/info/{id}")
+    public Worker getWorker(@PathVariable String id) {
+        Optional<Worker> optionalWorker = workerRepository.findById(id);
+        if (optionalWorker.isPresent()) {
+            return optionalWorker.get();
+        }
+        else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No worker with such ID found");
+        }
+    }
 }

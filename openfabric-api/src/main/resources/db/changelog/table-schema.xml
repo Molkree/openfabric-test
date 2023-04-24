@@ -62,6 +62,11 @@
                          newDataType="varchar(6)"
                          />
     </changeSet>
+    <changeSet id="WO_04" author="dmitry" >
+        <addColumn tableName="worker">
+            <column name="container_id" type="varchar(255)"/>
+        </addColumn>
+    </changeSet>
 
 
 </databaseChangeLog>

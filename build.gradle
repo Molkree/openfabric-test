@@ -12,6 +12,8 @@ repositories {
 }
 
 dependencies {
+    implementation 'com.github.docker-java:docker-java-core:3.3.0'
+    implementation 'com.github.docker-java:docker-java-transport-httpclient5:3.3.0'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
 }

@@ -61,6 +61,10 @@ public class Worker extends Datable implements Serializable {
     @Setter
     public Boolean recommended = true;
 
+    @Getter
+    @Setter
+    public String containerId;
+
     public static class Info {
         @Getter
         @Setter

@@ -4,6 +4,7 @@ import io.swagger.annotations.ApiModelProperty;
 
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PrePersist;
+import javax.persistence.PreRemove;
 import javax.persistence.PreUpdate;
 import java.io.Serializable;
 import java.util.Date;
@@ -32,4 +33,8 @@ public class Datable implements Serializable {
         this.updatedAt = new Date();
     }
 
+    @PreRemove
+    public void onRemove() {
+        this.deletedAt = new Date();
+    }
 }

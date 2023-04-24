@@ -56,6 +56,12 @@
             <column name="recommended" type="boolean"/>
         </addColumn>
     </changeSet>
+    <changeSet id="WO_03" author="dmitry" >
+        <modifyDataType  tableName="worker"
+                         columnName="port"
+                         newDataType="varchar(6)"
+                         />
+    </changeSet>
 
 
 </databaseChangeLog>

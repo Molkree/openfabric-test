@@ -18,8 +18,8 @@ public class WorkerController {
     private WorkerRepository workerRepository;
 
     @PostMapping("/start")
-    public String startWorker() {
-        Worker worker = new Worker();
+    public String startWorker(@RequestBody Worker.Info workerInfo) {
+        Worker worker = new Worker(workerInfo);
         workerRepository.save(worker);
         return worker.id;
     }
@@ -36,8 +36,7 @@ public class WorkerController {
             Worker worker = optionalWorker.get();
             worker.deletedAt = new Date();
             workerRepository.save(worker);
-        }
-        else {
+        } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No worker with such ID found");
         }
         return String.format("Stopped worker %s", id);
@@ -48,8 +47,7 @@ public class WorkerController {
         Optional<Worker> optionalWorker = workerRepository.findById(id);
         if (optionalWorker.isPresent()) {
             return optionalWorker.get();
-        }
-        else {
+        } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No worker with such ID found");
         }
     }

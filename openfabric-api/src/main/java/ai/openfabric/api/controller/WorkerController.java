@@ -108,4 +108,17 @@ public class WorkerController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No worker with such ID found");
         }
     }
+
+    @GetMapping("/status/{id}")
+    public String getStatus(@PathVariable String id) {
+        Optional<Worker> optionalWorker = workerRepository.findById(id);
+        if (optionalWorker.isPresent()) {
+            Worker worker = optionalWorker.get();
+            String containerId = worker.getContainerId();
+            InspectContainerResponse containerInfo = this.dockerClient.inspectContainerCmd(containerId).exec();
+            return containerInfo.getState().getStatus();
+        } else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No worker with such ID found");
+        }
+    }
 }

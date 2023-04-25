@@ -8,9 +8,11 @@ import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.Ports;
+import com.github.dockerjava.api.model.Statistics;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
+import com.github.dockerjava.core.InvocationBuilder.AsyncResultCallback;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import com.github.dockerjava.transport.DockerHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Date;
 import java.util.Objects;
@@ -117,6 +120,32 @@ public class WorkerController {
             String containerId = worker.getContainerId();
             InspectContainerResponse containerInfo = this.dockerClient.inspectContainerCmd(containerId).exec();
             return containerInfo.getState().getStatus();
+        } else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No worker with such ID found");
+        }
+    }
+
+    @GetMapping("/statistics/{id}")
+    public Statistics getStatistics(@PathVariable String id) {
+        Optional<Worker> optionalWorker = workerRepository.findById(id);
+        if (optionalWorker.isPresent()) {
+            Worker worker = optionalWorker.get();
+            String containerId = worker.getContainerId();
+            InspectContainerResponse containerInfo = this.dockerClient.inspectContainerCmd(containerId).exec();
+            String status = containerInfo.getState().getStatus();
+            if (Objects.equals(status, "running")) {
+                AsyncResultCallback<Statistics> callback = new AsyncResultCallback<>();
+                this.dockerClient.statsCmd(containerId).exec(callback);
+                try {
+                    Statistics stats = callback.awaitResult();
+                    callback.close();
+                    return stats;
+                } catch (RuntimeException | IOException e) {
+                    throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
+                }
+            } else {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker is not running");
+            }
         } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No worker with such ID found");
         }

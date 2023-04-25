@@ -14,6 +14,8 @@ import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import com.github.dockerjava.transport.DockerHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -73,7 +75,8 @@ public class WorkerController {
 
     @GetMapping("/list")
     public Iterable<Worker> getWorkers() {
-        return workerRepository.findAll();
+        Pageable firstPageWithFiveElements = PageRequest.of(0, 5);
+        return workerRepository.findAll(firstPageWithFiveElements);
     }
 
     @DeleteMapping("/stop/{id}")

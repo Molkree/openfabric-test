@@ -86,7 +86,7 @@ public class WorkerController {
             String containerId = worker.getContainerId();
             InspectContainerResponse containerInfo = this.dockerClient.inspectContainerCmd(containerId).exec();
             String status = containerInfo.getState().getStatus();
-            if (Objects.equals(status, "Running")) {
+            if (Objects.equals(status, "running")) {
                 this.dockerClient.stopContainerCmd(containerId).exec();
                 worker.deletedAt = new Date();
                 workerRepository.save(worker);

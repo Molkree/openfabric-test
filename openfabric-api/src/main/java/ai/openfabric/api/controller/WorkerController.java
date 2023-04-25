@@ -4,6 +4,7 @@ import ai.openfabric.api.model.Worker;
 import ai.openfabric.api.repository.WorkerRepository;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerResponse;
+import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.Ports;
@@ -19,12 +20,15 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.util.Date;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("${node.api.path}/worker")
 public class WorkerController {
     private final DockerClient dockerClient;
+    private final String dockerImage = "alpine:latest";
 
     public WorkerController() {
         DockerClientConfig config = DefaultDockerClientConfig.createDefaultConfigBuilder().build();
@@ -35,6 +39,11 @@ public class WorkerController {
                 .connectionTimeout(Duration.ofSeconds(30))
                 .responseTimeout(Duration.ofSeconds(45)).build();
         this.dockerClient = DockerClientImpl.getInstance(config, dockerHttpClient);
+        try {
+            this.dockerClient.pullImageCmd(dockerImage).start().awaitCompletion(30, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Autowired
@@ -43,20 +52,22 @@ public class WorkerController {
     @PostMapping("/start")
     public String startWorker(@RequestBody Worker.Info workerInfo) {
         Worker worker = new Worker(workerInfo);
+        workerRepository.save(worker);
         String serializedPort = worker.getPort() + "/" + worker.getProtocol();
         ExposedPort exposedPort = ExposedPort.parse(serializedPort);
         Ports portBindings = new Ports();
         portBindings.bind(exposedPort, Ports.Binding.bindPort(Integer.parseInt(worker.getPort())));
-        CreateContainerResponse container = this.dockerClient.createContainerCmd("java:latest")
-                .withName(worker.getName() + "+" + worker.getId())
+        CreateContainerResponse container = this.dockerClient.createContainerCmd(this.dockerImage)
+                .withName(worker.getName() + "-" + worker.getId())
                 .withHostName(worker.getDomain())
                 .withExposedPorts(exposedPort)
                 .withHostConfig(new HostConfig()
                         .withPortBindings(portBindings))
+                .withCmd("sleep", "300")
                 .exec();
         worker.setContainerId(container.getId());
-        this.dockerClient.startContainerCmd(container.getId()).exec();
         workerRepository.save(worker);
+        this.dockerClient.startContainerCmd(container.getId()).exec();
         return worker.getId();
     }
 
@@ -70,13 +81,20 @@ public class WorkerController {
         Optional<Worker> optionalWorker = workerRepository.findById(id);
         if (optionalWorker.isPresent()) {
             Worker worker = optionalWorker.get();
-            this.dockerClient.stopContainerCmd(worker.getContainerId()).exec();
-            worker.deletedAt = new Date();
-            workerRepository.save(worker);
+            String containerId = worker.getContainerId();
+            InspectContainerResponse containerInfo = this.dockerClient.inspectContainerCmd(containerId).exec();
+            String status = containerInfo.getState().getStatus();
+            if (Objects.equals(status, "Running")) {
+                this.dockerClient.stopContainerCmd(containerId).exec();
+                worker.deletedAt = new Date();
+                workerRepository.save(worker);
+                return String.format("Stopped worker %s", id);
+            } else {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker is not running");
+            }
         } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No worker with such ID found");
         }
-        return String.format("Stopped worker %s", id);
     }
 
     @GetMapping("/info/{id}")

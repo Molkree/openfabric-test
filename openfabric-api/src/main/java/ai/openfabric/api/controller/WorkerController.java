@@ -83,27 +83,21 @@ public class WorkerController {
 
     @DeleteMapping("/stop/{id}")
     public String stopWorker(@PathVariable String id) {
-        Optional<Worker> optionalWorker = workerRepository.findById(id);
-        if (optionalWorker.isPresent()) {
-            Worker worker = optionalWorker.get();
-            String containerId = worker.getContainerId();
-            InspectContainerResponse containerInfo = this.dockerClient.inspectContainerCmd(containerId).exec();
-            String status = containerInfo.getState().getStatus();
-            if (Objects.equals(status, "running")) {
-                this.dockerClient.stopContainerCmd(containerId).exec();
-                worker.deletedAt = new Date();
-                workerRepository.save(worker);
-                return String.format("Stopped worker %s", id);
-            } else {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker is not running");
-            }
+        Worker worker = unwrapWorker(id);
+        String containerId = worker.getContainerId();
+        InspectContainerResponse containerInfo = this.dockerClient.inspectContainerCmd(containerId).exec();
+        String status = containerInfo.getState().getStatus();
+        if (Objects.equals(status, "running")) {
+            this.dockerClient.stopContainerCmd(containerId).exec();
+            worker.deletedAt = new Date();
+            workerRepository.save(worker);
+            return String.format("Stopped worker %s", id);
         } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No worker with such ID found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker is not running");
         }
     }
 
-    @GetMapping("/info/{id}")
-    public Worker getWorker(@PathVariable String id) {
+    private Worker unwrapWorker(String id) {
         Optional<Worker> optionalWorker = workerRepository.findById(id);
         if (optionalWorker.isPresent()) {
             return optionalWorker.get();
@@ -112,42 +106,37 @@ public class WorkerController {
         }
     }
 
+    @GetMapping("/info/{id}")
+    public Worker getWorker(@PathVariable String id) {
+        return unwrapWorker(id);
+    }
+
     @GetMapping("/status/{id}")
     public String getStatus(@PathVariable String id) {
-        Optional<Worker> optionalWorker = workerRepository.findById(id);
-        if (optionalWorker.isPresent()) {
-            Worker worker = optionalWorker.get();
-            String containerId = worker.getContainerId();
-            InspectContainerResponse containerInfo = this.dockerClient.inspectContainerCmd(containerId).exec();
-            return containerInfo.getState().getStatus();
-        } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No worker with such ID found");
-        }
+        Worker worker = unwrapWorker(id);
+        String containerId = worker.getContainerId();
+        InspectContainerResponse containerInfo = this.dockerClient.inspectContainerCmd(containerId).exec();
+        return containerInfo.getState().getStatus();
     }
 
     @GetMapping("/statistics/{id}")
     public Statistics getStatistics(@PathVariable String id) {
-        Optional<Worker> optionalWorker = workerRepository.findById(id);
-        if (optionalWorker.isPresent()) {
-            Worker worker = optionalWorker.get();
-            String containerId = worker.getContainerId();
-            InspectContainerResponse containerInfo = this.dockerClient.inspectContainerCmd(containerId).exec();
-            String status = containerInfo.getState().getStatus();
-            if (Objects.equals(status, "running")) {
-                AsyncResultCallback<Statistics> callback = new AsyncResultCallback<>();
-                this.dockerClient.statsCmd(containerId).exec(callback);
-                try {
-                    Statistics stats = callback.awaitResult();
-                    callback.close();
-                    return stats;
-                } catch (RuntimeException | IOException e) {
-                    throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
-                }
-            } else {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker is not running");
+        Worker worker = unwrapWorker(id);
+        String containerId = worker.getContainerId();
+        InspectContainerResponse containerInfo = this.dockerClient.inspectContainerCmd(containerId).exec();
+        String status = containerInfo.getState().getStatus();
+        if (Objects.equals(status, "running")) {
+            AsyncResultCallback<Statistics> callback = new AsyncResultCallback<>();
+            this.dockerClient.statsCmd(containerId).exec(callback);
+            try {
+                Statistics stats = callback.awaitResult();
+                callback.close();
+                return stats;
+            } catch (RuntimeException | IOException e) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
             }
         } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No worker with such ID found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker is not running");
         }
     }
 }
